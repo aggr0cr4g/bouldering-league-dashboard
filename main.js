@@ -640,6 +640,7 @@ function filterByComp(results, compId) {
  */
 function computeFunStats(results, climberStats, teamStats, filterCompId = 'all') {
   const funStats = {
+    total_attempts: 0,
     most_attempts_team: null,
     most_attempts_boulder: null,
     least_attempts_boulder: null,
@@ -647,8 +648,19 @@ function computeFunStats(results, climberStats, teamStats, filterCompId = 'all')
     flash_master: null,
     efficiency_king: null,
     perfect_score: null,
-    zone_hero: null
+    zone_hero: null,
+    send_rate_king: null
   };
+  
+  // Calculate total attempts across everyone
+  if (results.length > 0) {
+    let totalAttempts = 0;
+    results.forEach(result => {
+      const attempts = parseInt(result.attempts_to_zone || 0) + parseInt(result.attempts_to_top || 0);
+      totalAttempts += attempts;
+    });
+    funStats.total_attempts = totalAttempts;
+  }
   
   // Calculate most attempts by team
   if (teamStats.size > 0) {
@@ -1030,6 +1042,59 @@ function computeFunStats(results, climberStats, teamStats, filterCompId = 'all')
         funStats.zone_hero = {
           climber_name: winners.map(w => w.climber_name).join(' & '),
           zones: winners[0].zones,
+          attempts: winners[0].attempts,
+          is_tie: true
+        };
+      }
+    }
+  }
+  
+  // Calculate Send Rate King (highest percentage of boulders topped)
+  if (climberStats.size > 0) {
+    const candidates = [];
+    
+    climberStats.forEach((climber, climberId) => {
+      // Count total boulders attempted (any result entry for this climber)
+      const bouldersAttempted = results.filter(r => r.climber_id === climberId).length;
+      
+      // Only consider climbers who attempted at least 5 boulders
+      if (bouldersAttempted >= 5) {
+        const topsCount = results.filter(r => 
+          r.climber_id === climberId && parseInt(r.top_completed) === 1
+        ).length;
+        
+        const sendRate = (topsCount / bouldersAttempted) * 100;
+        
+        candidates.push({
+          climber_name: climber.climber_name,
+          send_rate: sendRate,
+          tops: topsCount,
+          attempts: bouldersAttempted
+        });
+      }
+    });
+    
+    if (candidates.length > 0) {
+      // Sort by send rate (highest first)
+      candidates.sort((a, b) => b.send_rate - a.send_rate);
+      
+      // Get the highest send rate
+      const highestRate = candidates[0].send_rate;
+      const winners = candidates.filter(c => c.send_rate === highestRate);
+      
+      if (winners.length === 1) {
+        funStats.send_rate_king = {
+          climber_name: winners[0].climber_name,
+          send_rate: winners[0].send_rate.toFixed(1),
+          tops: winners[0].tops,
+          attempts: winners[0].attempts
+        };
+      } else {
+        // Tie - show all
+        funStats.send_rate_king = {
+          climber_name: winners.map(w => w.climber_name).join(' & '),
+          send_rate: winners[0].send_rate.toFixed(1),
+          tops: winners[0].tops,
           attempts: winners[0].attempts,
           is_tie: true
         };
@@ -1444,6 +1509,20 @@ function renderDivisionLeaderboards(divisionStats) {
  * @param {Object} funStats - Fun statistics object from computeFunStats
  */
 function renderFunStats(funStats) {
+  // Render total attempts
+  const totalAttemptsCard = document.getElementById('total-attempts-card');
+  if (totalAttemptsCard) {
+    const valueEl = totalAttemptsCard.querySelector('.stat-value');
+    const detailEl = totalAttemptsCard.querySelector('.stat-detail');
+    
+    if (valueEl) {
+      valueEl.textContent = funStats.total_attempts.toLocaleString();
+    }
+    if (detailEl) {
+      detailEl.textContent = 'Total attempts by everyone';
+    }
+  }
+  
   // Render most attempts team
   const mostAttemptsTeamCard = document.getElementById('most-attempts-team-card');
   if (mostAttemptsTeamCard && funStats.most_attempts_team && funStats.most_attempts_team.team_name) {
@@ -1649,6 +1728,32 @@ function renderFunStats(funStats) {
       valueEl.style.fontSize = '';
     }
     if (detailEl) detailEl.textContent = 'Most zones without tops';
+  }
+  
+  // Render Send Rate King
+  const sendRateKingCard = document.getElementById('send-rate-king-card');
+  if (sendRateKingCard && funStats.send_rate_king && funStats.send_rate_king.climber_name) {
+    const valueEl = sendRateKingCard.querySelector('.stat-value');
+    const detailEl = sendRateKingCard.querySelector('.stat-detail');
+    if (valueEl) {
+      valueEl.textContent = funStats.send_rate_king.climber_name;
+      if (funStats.send_rate_king.is_tie) {
+        valueEl.style.fontSize = '1.2rem';
+      } else {
+        valueEl.style.fontSize = '';
+      }
+    }
+    if (detailEl) {
+      detailEl.textContent = `${funStats.send_rate_king.send_rate}% send rate (${funStats.send_rate_king.tops}/${funStats.send_rate_king.attempts} boulders)`;
+    }
+  } else if (sendRateKingCard) {
+    const valueEl = sendRateKingCard.querySelector('.stat-value');
+    const detailEl = sendRateKingCard.querySelector('.stat-detail');
+    if (valueEl) {
+      valueEl.textContent = '--';
+      valueEl.style.fontSize = '';
+    }
+    if (detailEl) detailEl.textContent = 'Highest top completion rate';
   }
   
   console.log('Fun stats rendered');
@@ -1857,6 +1962,7 @@ function renderTeamSearchResult(teamResult) {
   html += `<p><strong>Team Totals:</strong> ${teamResult.total_points} points, ${teamResult.total_attempts} attempts</p>`;
   
   if (teamResult.members.length > 0) {
+    html += '<div class="search-result-table-wrapper">';
     html += '<table class="search-result-table">';
     html += '<thead><tr><th>Climber</th><th>Division</th><th>Points</th><th>Attempts</th></tr></thead>';
     html += '<tbody>';
@@ -1871,6 +1977,7 @@ function renderTeamSearchResult(teamResult) {
     });
     
     html += '</tbody></table>';
+    html += '</div>';
   }
   
   html += '</div>';
@@ -1889,6 +1996,7 @@ function renderClimberSearchResult(climberResult) {
   html += `<p><strong>Totals:</strong> ${climberResult.total_points} points, ${climberResult.total_attempts} attempts</p>`;
   
   if (climberResult.results.length > 0) {
+    html += '<div class="search-result-table-wrapper">';
     html += '<table class="search-result-table">';
     html += '<thead><tr><th>Comp</th><th>Date</th><th>Boulder</th><th>Zone</th><th>Top</th><th>Points</th><th>Attempts</th></tr></thead>';
     html += '<tbody>';
@@ -1906,6 +2014,7 @@ function renderClimberSearchResult(climberResult) {
     });
     
     html += '</tbody></table>';
+    html += '</div>';
   }
   
   html += '</div>';

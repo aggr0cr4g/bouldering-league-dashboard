@@ -218,6 +218,12 @@
             <h2>🎉 Fun Statistics & Awards</h2>
             <div id="fun-stats-container" class="stats-grid">
                 <!-- Fun stats cards will be inserted here -->
+                <div class="stat-card" id="total-attempts-card">
+                    <h3>🔢 Total Attempts</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">Total attempts by everyone</div>
+                </div>
+                
                 <div class="stat-card" id="most-attempts-team-card">
                     <h3>Most Attempts (Team)</h3>
                     <div class="stat-value">--</div>
@@ -264,6 +270,12 @@
                     <h3>🎪 Zone Hero</h3>
                     <div class="stat-value">--</div>
                     <div class="stat-detail">Most zones without tops</div>
+                </div>
+                
+                <div class="stat-card" id="send-rate-king-card">
+                    <h3>👑 Send Rate King</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">Highest top completion rate</div>
                 </div>
             </div>
             
@@ -318,6 +330,21 @@
                         <p><strong>How it's calculated:</strong> Counts boulders where <code>zone_completed = 1</code> but <code>top_completed = 0</code>.</p>
                         <p><strong>Tie-breaker:</strong> If multiple climbers have the same number of zones-without-tops, the one with fewer total attempts wins. If still tied, all winners are shown.</p>
                         <p><strong>Why it's cool:</strong> Celebrates the climber who gets SO close but the top remains elusive. Persistence pays off!</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>👑 Send Rate King</h4>
+                        <p><strong>Who wins:</strong> The climber with the highest percentage of boulders topped.</p>
+                        <p><strong>How it's calculated:</strong> <code>(Number of Tops ÷ Total Boulders Attempted) × 100</code></p>
+                        <p><strong>Minimum requirement:</strong> Must have attempted at least 5 boulders to qualify.</p>
+                        <p><strong>Tie-breaker:</strong> If multiple climbers have the exact same send rate, all tied climbers are shown.</p>
+                        <p><strong>Why it's cool:</strong> Shows pure success rate! A 90% send rate means you topped 9 out of every 10 boulders you tried. This complements Zone Hero by celebrating those who finish what they start!</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>🔢 Total Attempts</h4>
+                        <p><strong>What it shows:</strong> The combined total of all attempts made by all climbers.</p>
+                        <p><strong>Why it's cool:</strong> Shows the overall effort and engagement of the entire league! The higher the number, the more everyone is pushing themselves.</p>
                     </div>
                     
                     <div class="info-item">

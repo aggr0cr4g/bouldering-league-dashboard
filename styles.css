@@ -790,18 +790,36 @@ th[data-sort]:focus {
     font-size: var(--font-size-lg);
 }
 
+/* Wrapper for search result tables to enable horizontal scrolling */
+.search-result-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+}
+
 /* Mobile responsiveness for search results */
 @media (max-width: 768px) {
     .search-result-table {
         font-size: 0.75rem;
+        min-width: 600px; /* Ensure table doesn't compress too much */
     }
     
     .search-result-table th,
     .search-result-table td {
         padding: var(--spacing-xs);
+        white-space: nowrap;
     }
     
     .search-result-card {
         padding: var(--spacing-sm);
+    }
+    
+    .search-result-card h4 {
+        font-size: var(--font-size-base);
+    }
+    
+    .search-result-card p {
+        font-size: var(--font-size-sm);
     }
 }
