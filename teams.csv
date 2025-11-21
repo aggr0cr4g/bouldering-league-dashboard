@@ -1,0 +1,9 @@
+team_id,team_name,climber_id,climber_name,division
+T1,K-Pop Dynamo Slabbers,C101,Jane Doe,Intermediate
+T1,K-Pop Dynamo Slabbers,C102,John Smith,Advanced
+T1,K-Pop Dynamo Slabbers,C103,Alice Johnson,Beginner
+T2,The Crimpers,C201,Bob Wilson,Advanced
+T2,The Crimpers,C202,Carol Martinez,Intermediate
+T3,Beta Breakers,C301,David Lee,Beginner
+T3,Beta Breakers,C302,Emma Davis,Advanced
+T3,Beta Breakers,C303,Frank Brown,Intermediate

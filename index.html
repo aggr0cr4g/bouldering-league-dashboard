@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bouldering Competition Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!--
+    ========================================
+    BOULDERING COMPETITION DASHBOARD
+    ========================================
+    
+    This dashboard displays leaderboards and statistics for a bouldering league.
+    Data is loaded from two CSV files: teams.csv and results.csv
+    
+    CSV FILE FORMATS:
+    
+    1. teams.csv
+       Required columns:
+       - team_id: Unique team identifier (e.g., "T1", "T2")
+       - team_name: Name of the team
+       - climber_id: Unique climber identifier (e.g., "C101", "C102")
+       - climber_name: Name of the climber
+       - division: Skill level - "Beginner", "Intermediate", or "Advanced"
+       
+       Example:
+       team_id,team_name,climber_id,climber_name,division
+       T1,K-Pop Dynamo Slabbers,C101,Jane Doe,Intermediate
+       T1,K-Pop Dynamo Slabbers,C102,John Smith,Advanced
+    
+    2. results.csv
+       Required columns:
+       - comp_id: Competition identifier (1, 2, 3, or 4)
+       - comp_date: Date of competition (YYYY-MM-DD format)
+       - boulder_id: Boulder problem identifier (e.g., "#1", "#2")
+       - climber_id: Must match a climber_id from teams.csv
+       - attempts_to_zone: Number of attempts to reach the zone
+       - attempts_to_top: Number of attempts to reach the top
+       - zone_completed: 1 if zone was reached, 0 otherwise
+       - top_completed: 1 if top was reached, 0 otherwise
+       
+       Example:
+       comp_id,comp_date,boulder_id,climber_id,attempts_to_zone,attempts_to_top,zone_completed,top_completed
+       1,2025-12-01,#1,C101,2,3,1,1
+       1,2025-12-01,#2,C101,5,0,1,0
+    
+    SCORING RULES:
+    - Zone completed: 50 points
+    - Top completed: 50 points (in addition to zone points)
+    - Maximum points per boulder: 100 (50 for zone + 50 for top)
+    - Total points: Sum of all points across all boulders and competitions
+    - Total attempts: Sum of attempts_to_zone + attempts_to_top for all results
+    
+    LEADERBOARD SORTING:
+    - Teams and individuals are ranked by:
+      1. Total points (descending - higher is better)
+      2. Total attempts (ascending - fewer is better)
+      3. Name (alphabetical)
+    
+    ADDING NEW DATA:
+    - To add a new competition: Add rows to results.csv with the new comp_id
+    - To add a new climber: Add a row to teams.csv, then add their results to results.csv
+    - To add a new team: Add rows to teams.csv for each team member
+    - The climber_id field links the two CSV files together
+    
+    ========================================
+    -->
+    
+    <header>
+        <h1>🧗 Bouldering Competition Dashboard</h1>
+        <p>League Leaderboards, Statistics, and Results</p>
+    </header>
+    
+    <main>
+        <!-- Controls Section -->
+        <section id="controls" class="controls-section">
+            <div class="control-group">
+                <label for="comp-filter">Filter by Competition:</label>
+                <select id="comp-filter">
+                    <option value="all">All Competitions</option>
+                    <option value="1">Comp 1</option>
+                    <option value="2">Comp 2</option>
+                    <option value="3">Comp 3</option>
+                    <option value="4">Comp 4</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="search-box">Search Teams or Climbers:</label>
+                <input type="text" id="search-box" placeholder="Enter team or climber name...">
+            </div>
+            
+            <div class="control-group">
+                <button id="reload-btn">Reload Data</button>
+            </div>
+        </section>
+        
+        <!-- Error Display -->
+        <div id="error-display" class="error-message" style="display: none;"></div>
+        
+        <!-- Search Results Section -->
+        <section id="search-results" class="search-section" style="display: none;">
+            <h2>Search Results</h2>
+            <div id="search-content"></div>
+        </section>
+        
+        <!-- Team Leaderboard Section -->
+        <section id="team-leaderboard-section" class="leaderboard-section">
+            <h2>🏆 Team Leaderboard</h2>
+            <div class="table-container">
+                <table id="team-leaderboard">
+                    <thead>
+                        <tr>
+                            <th data-sort="rank">Rank</th>
+                            <th data-sort="team">Team</th>
+                            <th data-sort="points">Total Points</th>
+                            <th data-sort="attempts">Total Attempts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Team leaderboard rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- Individual Leaderboard Section -->
+        <section id="individual-leaderboard-section" class="leaderboard-section">
+            <h2>🧗 Individual Leaderboard (All Divisions)</h2>
+            <div class="table-container">
+                <table id="individual-leaderboard">
+                    <thead>
+                        <tr>
+                            <th data-sort="rank">Rank</th>
+                            <th data-sort="climber">Climber</th>
+                            <th data-sort="team">Team</th>
+                            <th data-sort="division">Division</th>
+                            <th data-sort="points">Total Points</th>
+                            <th data-sort="attempts">Total Attempts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Individual leaderboard rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- Division Leaderboards Section -->
+        <section id="division-leaderboards-section" class="leaderboard-section">
+            <h2>🎯 Division Leaderboards</h2>
+            
+            <div class="division-leaderboard">
+                <h3>🌱 Beginner Division</h3>
+                <div class="table-container">
+                    <table id="beginner-leaderboard">
+                        <thead>
+                            <tr>
+                                <th data-sort="rank">Rank</th>
+                                <th data-sort="climber">Climber</th>
+                                <th data-sort="team">Team</th>
+                                <th data-sort="points">Total Points</th>
+                                <th data-sort="attempts">Total Attempts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Beginner division rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="division-leaderboard">
+                <h3>🔥 Intermediate Division</h3>
+                <div class="table-container">
+                    <table id="intermediate-leaderboard">
+                        <thead>
+                            <tr>
+                                <th data-sort="rank">Rank</th>
+                                <th data-sort="climber">Climber</th>
+                                <th data-sort="team">Team</th>
+                                <th data-sort="points">Total Points</th>
+                                <th data-sort="attempts">Total Attempts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Intermediate division rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="division-leaderboard">
+                <h3>💪 Advanced Division</h3>
+                <div class="table-container">
+                    <table id="advanced-leaderboard">
+                        <thead>
+                            <tr>
+                                <th data-sort="rank">Rank</th>
+                                <th data-sort="climber">Climber</th>
+                                <th data-sort="team">Team</th>
+                                <th data-sort="points">Total Points</th>
+                                <th data-sort="attempts">Total Attempts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Advanced division rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Fun Statistics Section -->
+        <section id="fun-stats-section" class="fun-stats-section">
+            <h2>🎉 Fun Statistics & Awards</h2>
+            <div id="fun-stats-container" class="stats-grid">
+                <!-- Fun stats cards will be inserted here -->
+                <div class="stat-card" id="most-attempts-team-card">
+                    <h3>Most Attempts (Team)</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">-- attempts</div>
+                </div>
+                
+                <div class="stat-card" id="most-attempts-boulder-card">
+                    <h3>Most Attempts (Boulder)</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">-- attempts</div>
+                </div>
+                
+                <div class="stat-card" id="least-attempts-boulder-card">
+                    <h3>Least Attempts (Boulder)</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">-- attempts</div>
+                </div>
+                
+                <div class="stat-card" id="try-hard-award-card">
+                    <h3>🏆 Try Hard Award</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">-- attempts, -- tops</div>
+                </div>
+                
+                <div class="stat-card" id="flash-master-card">
+                    <h3>⚡ Flash Master</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">-- first-attempt tops</div>
+                </div>
+                
+                <div class="stat-card" id="efficiency-king-card">
+                    <h3>🎯 Efficiency King</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">-- points per attempt</div>
+                </div>
+                
+                <div class="stat-card" id="perfect-score-card">
+                    <h3>💯 Perfect Score</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">All boulders topped!</div>
+                </div>
+                
+                <div class="stat-card" id="zone-hero-card">
+                    <h3>🎪 Zone Hero</h3>
+                    <div class="stat-value">--</div>
+                    <div class="stat-detail">Most zones without tops</div>
+                </div>
+            </div>
+            
+            <!-- Fun Stats Explanation -->
+            <div class="fun-stats-info">
+                <button id="toggle-stats-info" class="info-toggle">
+                    ℹ️ What do these awards mean?
+                </button>
+                <div id="stats-info-content" class="info-content" style="display: none;">
+                    <h3>🏆 Award Explanations</h3>
+                    
+                    <div class="info-item">
+                        <h4>🏆 Try Hard Award</h4>
+                        <p><strong>Who wins:</strong> The climber with the most total attempts who achieved at least one top.</p>
+                        <p><strong>Tie-breaker:</strong> If multiple climbers have the same number of attempts, the one with MORE tops wins. If still tied, ALL tied climbers are shown.</p>
+                        <p><strong>Why it's cool:</strong> Celebrates determination and persistence! This climber never gives up, even when the going gets tough.</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>⚡ Flash Master</h4>
+                        <p><strong>Who wins:</strong> The climber with the most first-attempt tops (flashes).</p>
+                        <p><strong>How it's calculated:</strong> Counts boulders where <code>top_completed = 1</code> and <code>attempts_to_top = 1</code>.</p>
+                        <p><strong>Tie-breaker:</strong> If multiple climbers have the same number of flashes, the one with FEWER total attempts wins. If still tied, ALL tied climbers are shown.</p>
+                        <p><strong>Why it's cool:</strong> Shows natural talent, great beta reading, and confidence! Flashing is the ultimate flex.</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>🎯 Efficiency King</h4>
+                        <p><strong>Who wins:</strong> The climber with the best points-per-attempt ratio.</p>
+                        <p><strong>How it's calculated:</strong> <code>Total Points ÷ Total Attempts</code></p>
+                        <p><strong>Tie-breaker:</strong> If multiple climbers have the exact same ratio, ALL tied climbers are shown.</p>
+                        <p><strong>Why it's cool:</strong> Rewards smart, efficient climbing over brute force. Quality over quantity!</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>💯 Perfect Score</h4>
+                        <p><strong>Who wins:</strong> The climber(s) who topped ALL boulders in a competition with the fewest total attempts.</p>
+                        <p><strong>How it's calculated:</strong> Finds all climbers with <code>top_completed = 1</code> for every boulder in a comp, then compares their total attempts.</p>
+                        <p><strong>Tie-breaker:</strong> Fewest attempts wins. If attempts are equal, ALL tied climbers are shown together.</p>
+                        <p><strong>Filter behavior:</strong></p>
+                        <ul>
+                            <li><strong>Specific comp:</strong> Shows winner(s) from that comp only</li>
+                            <li><strong>All Competitions:</strong> Compares ALL perfect scores across ALL comps and shows the overall winner(s) with fewest attempts</li>
+                        </ul>
+                        <p><strong>Example:</strong> If Jane gets 4/4 in Comp 2 (12 attempts) and John gets 5/5 in Comp 4 (12 attempts), viewing "All Competitions" shows both as tied winners!</p>
+                        <p><strong>Why it's cool:</strong> The ultimate achievement! Complete domination with efficiency.</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>🎪 Zone Hero</h4>
+                        <p><strong>Who wins:</strong> The climber with the most zones reached WITHOUT topping.</p>
+                        <p><strong>How it's calculated:</strong> Counts boulders where <code>zone_completed = 1</code> but <code>top_completed = 0</code>.</p>
+                        <p><strong>Tie-breaker:</strong> If multiple climbers have the same number of zones-without-tops, the one with fewer total attempts wins. If still tied, all winners are shown.</p>
+                        <p><strong>Why it's cool:</strong> Celebrates the climber who gets SO close but the top remains elusive. Persistence pays off!</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>📊 Most Attempts (Team)</h4>
+                        <p><strong>Who wins:</strong> The team with the highest combined attempts across all members.</p>
+                        <p><strong>Why it's cool:</strong> Shows team dedication and effort!</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>🧗 Most Attempts (Boulder)</h4>
+                        <p><strong>Who wins:</strong> The boulder that received the most total attempts from all climbers.</p>
+                        <p><strong>Why it's cool:</strong> Identifies the hardest or most popular boulder!</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h4>✨ Least Attempts (Boulder)</h4>
+                        <p><strong>Who wins:</strong> The boulder that received the fewest attempts (minimum 1).</p>
+                        <p><strong>Why it's cool:</strong> Could be the easiest boulder, or maybe everyone avoided it!</p>
+                    </div>
+                    
+                    <div class="info-note">
+                        <p><strong>Note:</strong> All stats update automatically when you change the competition filter. Some awards may not appear if no one qualifies (e.g., Perfect Score requires topping all boulders).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer>
+        <p id="footer-text">Bouldering Competition Dashboard | Loading data...</p>
+    </footer>
+    
+    <script src="config.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
