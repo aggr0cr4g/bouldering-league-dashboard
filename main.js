@@ -1069,33 +1069,41 @@ function computeFunStats(results, climberStats, teamStats, filterCompId = 'all')
           climber_name: climber.climber_name,
           send_rate: sendRate,
           tops: topsCount,
-          attempts: bouldersAttempted
+          boulders_attempted: bouldersAttempted,
+          total_attempts: climber.total_attempts // Use actual attempt count for tiebreaker
         });
       }
     });
     
     if (candidates.length > 0) {
-      // Sort by send rate (highest first)
-      candidates.sort((a, b) => b.send_rate - a.send_rate);
+      // Sort by send rate (highest first), then by total attempts (fewest first)
+      candidates.sort((a, b) => {
+        if (b.send_rate !== a.send_rate) {
+          return b.send_rate - a.send_rate;
+        }
+        return a.total_attempts - b.total_attempts; // Tiebreaker: fewest total attempts wins
+      });
       
-      // Get the highest send rate
+      // Get the highest send rate and fewest total attempts among those with highest rate
       const highestRate = candidates[0].send_rate;
-      const winners = candidates.filter(c => c.send_rate === highestRate);
+      const tiedByRate = candidates.filter(c => c.send_rate === highestRate);
+      const fewestAttempts = tiedByRate[0].total_attempts;
+      const winners = tiedByRate.filter(c => c.total_attempts === fewestAttempts);
       
       if (winners.length === 1) {
         funStats.send_rate_king = {
           climber_name: winners[0].climber_name,
           send_rate: winners[0].send_rate.toFixed(1),
           tops: winners[0].tops,
-          attempts: winners[0].attempts
+          boulders_attempted: winners[0].boulders_attempted
         };
       } else {
-        // Tie - show all
+        // Still tied after tiebreaker - show all
         funStats.send_rate_king = {
           climber_name: winners.map(w => w.climber_name).join(' & '),
           send_rate: winners[0].send_rate.toFixed(1),
           tops: winners[0].tops,
-          attempts: winners[0].attempts,
+          boulders_attempted: winners[0].boulders_attempted,
           is_tie: true
         };
       }
@@ -1744,7 +1752,7 @@ function renderFunStats(funStats) {
       }
     }
     if (detailEl) {
-      detailEl.textContent = `${funStats.send_rate_king.send_rate}% send rate (${funStats.send_rate_king.tops}/${funStats.send_rate_king.attempts} boulders)`;
+      detailEl.textContent = `${funStats.send_rate_king.send_rate}% send rate (${funStats.send_rate_king.tops}/${funStats.send_rate_king.boulders_attempted} boulders)`;
     }
   } else if (sendRateKingCard) {
     const valueEl = sendRateKingCard.querySelector('.stat-value');
